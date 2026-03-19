@@ -1,55 +1,52 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(layout="wide")
+st.title("Diamond System V5")
 
-st.title("💎 Diamond System V4")
+text = st.text_area("Nhap comment (moi dong 1 comment):")
 
-text = st.text_area("📥 Dán comment (mỗi dòng 1 comment):", height=200)
-
-def score_comment(c):
+def score(c):
     c = c.lower()
-    if "giá" in c or "bao nhiêu" in c:
-        return 5, "🔥 Khách hỏi giá"
-    elif "inbox" in c or "ib" in c:
-        return 5, "🔥 Khách quan tâm"
-    elif "đẹp" in c:
-        return 3, "🙂 Khách khen"
+    if "gia" in c or "bao nhieu" in c:
+        return 5, "Khach hoi gia"
+    elif "ib" in c or "inbox" in c:
+        return 5, "Khach quan tam"
+    elif "dep" in c:
+        return 3, "Khach khen"
     else:
-        return 1, "❄️ Khách lạnh"
+        return 1, "Khach lanh"
 
-if st.button("🚀 Phân tích ngay", use_container_width=True):
+if st.button("Phan tich"):
 
     if text.strip() == "":
-        st.warning("⚠️ Chưa nhập dữ liệu")
+        st.write("Chua nhap du lieu")
     else:
         lines = text.split("\n")
-
         data = []
 
         for line in lines:
-            score, label = score_comment(line)
+            s, l = score(line)
             data.append({
                 "Comment": line,
-                "Phân loại": label,
-                "Điểm": score
+                "Loai": l,
+                "Diem": s
             })
 
         df = pd.DataFrame(data)
 
-        st.subheader("🔥 Bảng kết quả:")
-        st.dataframe(df, use_container_width=True)
+        st.write("Bang ket qua:")
+        st.dataframe(df)
 
-        vip = df[df["Điểm"] >= 5]
+        vip = df[df["Diem"] >= 5]
 
-        st.subheader("💰 Khách tiềm năng:")
+        st.write("Khach tiem nang:")
 
-if len(vip) == 0:
-    st.write("❌ Không có khách tiềm năng")
-else:
-    st.success(f"🔥 Có {len(vip)} khách tiềm năng!")
+        if len(vip) == 0:
+            st.write("Khong co")
+        else:
+            st.write("Co", len(vip), "khach")
 
-    for i, row in vip.iterrows():
-        st.write(f"👉 {row['Comment']} ({row['Phân loại']})")
+            for i, row in vip.iterrows():
+                st.write("-", row["Comment"], "(", row["Loai"], ")")
 
-    st.dataframe(vip, use_container_width=True)
+            st.dataframe(vip)
