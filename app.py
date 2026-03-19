@@ -47,7 +47,10 @@ accounts = [
 ]
 
 if "data" not in st.session_state:
-    st.session_state.data = saved.get("data",{acc:[] for acc in accounts})
+    if isinstance(saved, dict):
+        st.session_state.data = saved.get("data",{acc:[] for acc in accounts})
+    else:
+        st.session_state.data = {acc:[] for acc in accounts}
 
 if "customers" not in st.session_state:
     st.session_state.customers = saved.get("customers",[])
