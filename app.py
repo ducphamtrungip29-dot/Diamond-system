@@ -1,174 +1,212 @@
 import streamlit as st
-import pandas as pd
 import datetime
+import random
 import json
 import os
 
 st.set_page_config(layout="wide")
-st.title("💎 Diamond System FINAL")
+
+# ===== UI =====
+st.markdown("""
+<style>
+body {background:#0b0f1a;}
+h1 {text-align:center;color:#f5d27a;font-size:22px;}
+.stTabs [role="tab"] {font-size:13px;padding:8px;}
+.card {
+background:#111827;
+padding:12px;
+border-radius:14px;
+margin-bottom:12px;
+border:1px solid rgba(245,210,122,0.2);
+font-size:14px;
+}
+.stButton>button {
+width:100%;
+height:45px;
+border-radius:12px;
+font-size:16px;
+background:linear-gradient(135deg,#f5d27a,#c9a44c);
+color:black;
+font-weight:bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("💎 Diamond System")
 
 # ===== LOAD DATA =====
+if os.path.exists("data.json"):
+    with open("data.json","r") as f:
+        saved = json.load(f)
+else:
+    saved = {"data":{}, "customers":[]}
+
+accounts = [
+"Trần Linh Diamond","Trần Linh Jewellery","Trần Linh Kim Cương",
+"Trần Linh","Diamond Linh","Fanpage","Zalo","TikTok"
+]
+
 if "data" not in st.session_state:
-    if os.path.exists("data.json"):
-        with open("data.json", "r") as f:
-            st.session_state.data = json.load(f)
+    st.session_state.data = saved.get("data",{acc:[] for acc in accounts})
+
+if "customers" not in st.session_state:
+    st.session_state.customers = saved.get("customers",[])
+
+def save():
+    with open("data.json","w") as f:
+        json.dump({
+            "data": st.session_state.data,
+            "customers": st.session_state.customers
+        },f)
+
+# ===== STYLE =====
+style_map = {
+"Trần Linh Diamond":"ban_hang",
+"Trần Linh Jewellery":"cam_xuc",
+"Trần Linh Kim Cương":"story",
+"Trần Linh":"ban_hang",
+"Diamond Linh":"chot_don",
+"Fanpage":"ban_hang","Zalo":"chot_don","TikTok":"story"
+}
+
+def caption(c,s):
+    hooks = {
+        "ban_hang":["Mẫu này đang rất hot","Khách hỏi rất nhiều"],
+        "cam_xuc":["Không cần nói nhiều","Chỉ một ánh nhìn"],
+        "story":["Có một câu chuyện phía sau"],
+        "chot_don":["Số lượng có hạn","Giữ ngay hôm nay"]
+    }
+    end = ["Inbox nhé","Bạn thấy sao?","Nhắn mình","Đừng bỏ lỡ"]
+    return f"{random.choice(hooks[s])}\n\n{c}\n\n{random.choice(end)}"
+
+def suggest_full(content, style="ban_hang"):
+    if style == "cam_xuc":
+        return f"Có những thứ không cần nói nhiều...\n\n{content}\n\nBạn thấy sao?"
+    elif style == "chot_don":
+        return f"Số lượng không nhiều...\n\n{content}\n\nInbox ngay để giữ mẫu 💎"
+    elif style == "story":
+        return f"Có một câu chuyện phía sau...\n\n{content}\n\nBạn có cảm nhận không?"
     else:
-        st.session_state.data = []
+        return f"Mẫu này đang được hỏi rất nhiều...\n\n{content}\n\nInbox để xem chi tiết 💎"
 
-# ===== PROFILE (ID KHÓA CỨNG) =====
-if "profiles" not in st.session_state:
-    st.session_state.profiles = {
-        "fb1": {"name": "FB 1", "image": None},
-        "fb2": {"name": "FB 2", "image": None},
-        "fb3": {"name": "FB 3", "image": None},
-        "fb4": {"name": "FB 4", "image": None},
-        "fb5": {"name": "FB 5", "image": None},
-        "fanpage1": {"name": "Fanpage", "image": None},
-        "zalo1": {"name": "Zalo", "image": None},
-        "tiktok1": {"name": "TikTok", "image": None},
-    }
+# ===== AUTO =====
+content_pool = ["Nhẫn kim cương","Dây chuyền sang trọng","Trang sức cao cấp","Mẫu mới đẹp","Phong cách tinh tế"]
+time_slots = ["09:00","12:00","19:30","21:00"]
 
-tab_ids = list(st.session_state.profiles.keys())
-tab_labels = [st.session_state.profiles[i]["name"] for i in tab_ids]
-
-tabs = st.tabs(tab_labels + ["📥 Nhập lịch", "🧠 V6", "⚙️ Cài đặt"])
-
-# ===== HIỂN THỊ LỊCH =====
-for i, pid in enumerate(tab_ids):
-    with tabs[i]:
-        profile = st.session_state.profiles[pid]
-
-        st.markdown(f"### 👤 {profile['name']}")
-
-        if profile["image"]:
-            st.image(profile["image"], use_container_width=True)
-
-        df = pd.DataFrame(st.session_state.data)
-
-        if not df.empty:
-            st.dataframe(df[df["Kênh"] == pid], use_container_width=True)
-
-# ===== PARSE AUTO =====
-def parse(text):
-    mapping = {
-        "fb 1": "fb1",
-        "fb 2": "fb2",
-        "fb 3": "fb3",
-        "fb 4": "fb4",
-        "fb 5": "fb5",
-        "fanpage": "fanpage1",
-        "zalo": "zalo1",
-        "tiktok": "tiktok1"
-    }
-
-    lines = text.split("\n")
-    result = []
-
-    for line in lines:
-        parts = line.split("|")
-
-        if len(parts) >= 5:
-            channel_input = parts[0].strip().lower()
-            channel_id = mapping.get(channel_input, "fb1")
-
-            result.append({
-                "Kênh": channel_id,
-                "Ngày": parts[1].strip(),
-                "Giờ": parts[2].strip(),
-                "Nội dung": parts[3].strip(),
-                "Loại": parts[4].strip()
+def auto():
+    today = datetime.date.today()
+    for i in range(7):
+        d = str(today + datetime.timedelta(days=i))
+        for acc in accounts:
+            c = random.choice(content_pool)
+            s = style_map[acc]
+            st.session_state.data[acc].append({
+                "date":d,
+                "time":random.choice(time_slots),
+                "content":c,
+                "caption":caption(c,s)
             })
+    save()
 
-    return result
+# ===== TABS =====
+tabs = st.tabs(["💎1","💎2","💎3","💎4","💎5","📘","💬","🎬","🚀","💬","💰","🔁","📊","💾"])
 
-# ===== NHẬP LỊCH =====
-with tabs[len(tab_ids)]:
-    st.subheader("📥 Dán lịch")
+# ===== HIỂN THỊ =====
+for i,acc in enumerate(accounts):
+    with tabs[i]:
+        st.subheader(acc)
+        for item in st.session_state.data[acc]:
+            st.markdown(f"""
+            <div class="card">
+            📅 {item['date']} • {item['time']}<br><br>
+            {item['content']}<br><br>
+            <i>{item['caption']}</i>
+            </div>
+            """, unsafe_allow_html=True)
 
-    st.info("Ví dụ: FB 1|19/03|09:00|Đăng bài|Post")
+            if st.button(f"✨ Gợi ý lại {item['date']}", key=f"{acc}{item['date']}"):
+                item["caption"] = suggest_full(item["content"], style_map[acc])
+                save()
+                st.rerun()
 
-    text = st.text_area("Dán vào đây", height=200)
+# ===== AUTO =====
+with tabs[8]:
+    if st.button("🔥 Tạo lịch 7 ngày"):
+        auto()
+        st.success("Đã tạo xong")
 
-    if st.button("🚀 Lưu lịch"):
-        new = parse(text)
+# ===== CHAT =====
+with tabs[9]:
+    txt = st.text_area("Comment khách")
+    if st.button("Gợi ý"):
+        for t in txt.split("\n"):
+            if "giá" in t.lower():
+                st.success("Inbox mình nhé 💎")
+            else:
+                st.success("Inbox tư vấn nhé 💎")
 
-        st.session_state.data.extend(new)
+# ===== CHỐT =====
+with tabs[10]:
+    txt = st.text_area("Tin nhắn")
+    if st.button("Chốt"):
+        st.success("Mẫu này đang có khách giữ rồi, mình chốt sớm giúp em nhé 💎")
 
-        with open("data.json", "w") as f:
-            json.dump(st.session_state.data, f)
+# ===== FOLLOW =====
+def follow_msg(status):
+    if "VIP" in status:
+        return "Mẫu đó còn ít, em giữ giúp mình nhé 💎"
+    elif "Quan tâm" in status:
+        return "Em gửi thêm mẫu phù hợp hơn cho mình nhé 💎"
+    else:
+        return "Bên em có mẫu mới, mình xem thử nhé 💎"
 
-        st.success(f"Đã lưu {len(new)} lịch")
+with tabs[11]:
+    name = st.text_input("Tên khách")
+    if st.button("Follow"):
+        st.success(f"Nhắn {name} ngay 💎")
 
-# ===== V6 =====
-with tabs[len(tab_ids)+1]:
-    st.subheader("🧠 Phân tích khách")
+# ===== CRM =====
+with tabs[12]:
+    name = st.text_input("Tên khách")
+    note = st.text_input("Ghi chú")
+    status = st.selectbox("Trạng thái", ["🔥 VIP","🙂 Quan tâm","❄️ Lạnh"])
+    date = st.date_input("Follow")
 
-    cmt = st.text_area("Dán comment")
-
-    def score(c):
-        c = c.lower()
-        if "giá" in c:
-            return "🔥 VIP", "Inbox chốt giá"
-        elif "ib" in c:
-            return "🔥 Quan tâm", "Check inbox"
-        elif "đẹp" in c:
-            return "🙂 Khen", "Giữ tương tác"
-        else:
-            return "❄️ Lạnh", "Bỏ qua"
-
-    if st.button("Phân tích"):
-        for line in cmt.split("\n"):
-            tag, rep = score(line)
-            st.write(f"{line} → {tag}")
-            st.write(f"💬 {rep}")
-
-# ===== CÀI ĐẶT =====
-with tabs[len(tab_ids)+2]:
-    st.subheader("⚙️ Tùy chỉnh kênh")
-
-    selected = st.selectbox("Chọn kênh", tab_ids)
-
-    new_name = st.text_input("Tên", st.session_state.profiles[selected]["name"])
-    img = st.file_uploader("Ảnh", type=["png","jpg"])
-
-    if st.button("💾 Lưu"):
-        st.session_state.profiles[selected]["name"] = new_name
-
-        if img:
-            st.session_state.profiles[selected]["image"] = img
-
+    if st.button("Thêm khách"):
+        st.session_state.customers.append({
+            "name": name,
+            "note": note,
+            "status": status,
+            "date": str(date)
+        })
+        save()
         st.success("Đã lưu")
 
-# ===== EXPORT ICS =====
-def export(data):
-    ics = "BEGIN:VCALENDAR\nVERSION:2.0\n"
+    for c in st.session_state.customers:
+        st.markdown(f"""
+        <div class="card">
+        👤 {c['name']}<br>
+        {c['status']}<br>
+        🧠 {c['note']}<br>
+        ⏰ {c['date']}
+        </div>
+        """, unsafe_allow_html=True)
+        st.write(follow_msg(c["status"]))
 
-    for item in data:
-        try:
-            dt = datetime.datetime.strptime(item["Ngày"]+" "+item["Giờ"], "%d/%m %H:%M")
-        except:
-            continue
+# ===== BACKUP =====
+with tabs[13]:
+    if st.button("📥 Xuất backup"):
+        file = json.dumps({
+            "data": st.session_state.data,
+            "customers": st.session_state.customers
+        }, ensure_ascii=False)
 
-        dt_str = dt.strftime("%Y%m%dT%H%M%S")
+        st.download_button("Tải file", file, "backup.json")
 
-        ics += f"""BEGIN:VEVENT
-SUMMARY:{item['Kênh']} - {item['Nội dung']}
-DTSTART:{dt_str}
-BEGIN:VALARM
-TRIGGER:-PT5M
-ACTION:DISPLAY
-DESCRIPTION:Đến giờ đăng bài
-END:VALARM
-END:VEVENT
-"""
-
-    ics += "END:VCALENDAR"
-
-    with open("schedule.ics","w") as f:
-        f.write(ics)
-
-if st.button("📥 Xuất lịch (có thông báo 5p)"):
-    export(st.session_state.data)
-
-    with open("schedule.ics","rb") as f:
-        st.download_button("📱 Tải file", f, "schedule.ics")
+    uploaded = st.file_uploader("Khôi phục", type="json")
+    if uploaded:
+        content = json.load(uploaded)
+        st.session_state.data = content.get("data", {})
+        st.session_state.customers = content.get("customers", [])
+        save()
+        st.success("Khôi phục thành công")
