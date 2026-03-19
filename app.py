@@ -43,4 +43,13 @@ if st.button("🚀 Phân tích ngay", use_container_width=True):
         vip = df[df["Điểm"] >= 5]
 
         st.subheader("💰 Khách tiềm năng:")
-        st.dataframe(vip, use_container_width=True)
+
+if len(vip) == 0:
+    st.write("❌ Không có khách tiềm năng")
+else:
+    st.success(f"🔥 Có {len(vip)} khách tiềm năng!")
+
+    for i, row in vip.iterrows():
+        st.write(f"👉 {row['Comment']} ({row['Phân loại']})")
+
+    st.dataframe(vip, use_container_width=True)
