@@ -2,45 +2,19 @@ import streamlit as st
 
 st.title("💎 Diamond System V2")
 
-st.write("👉 Dán comment khách (mỗi dòng 1 người)")
+comment = st.text_area("Nhập comment khách hàng:")
 
-text = st.text_area("Nhập dữ liệu:")
-
-def score(comment):
-    c = comment.lower()
-    if "bao nhiêu" in c or "giá" in c:
+def score_comment(c):
+    c = c.lower()
+    if "giá" in c or "bao nhiêu" in c:
         return 5
-    if "inbox" in c:
+    elif "inbox" in c or "ib" in c:
         return 5
-    if "đẹp" in c:
-        return 2
-    return 1
-
-def classify(s):
-    if s >= 5:
-        return "🔥 VIP"
-    elif s >= 2:
-        return "🌱 Tiềm năng"
+    elif "đẹp" in c:
+        return 3
     else:
-        return "❌ Loại"
+        return 1
 
-if st.button("🚀 Phân tích"):
-    lines = text.split("\n")
-
-    results = []
-
-    for line in lines:
-        if line.strip() == "":
-            continue
-
-        s = score(line)
-        c = classify(s)
-
-        results.append({
-            "Khách": line,
-            "Điểm": s,
-            "Phân loại": c
-        })
-
-    st.write("📊 Kết quả:")
-    st.dataframe(results)
+if comment:
+    score = score_comment(comment)
+    st.write("🔥 Điểm:", score)
