@@ -7,11 +7,18 @@ except:
     OpenAI = None
 
 st.set_page_config(layout="wide")
-st.title("💎 Diamond System V16")
+st.title("💎 Diamond System V17")
 
 # ===== API =====
-api_key = st.text_input("🔑 API Key AI", type="password")
-client = OpenAI(api_key=api_key) if (api_key and OpenAI) else None
+if "api" not in st.session_state:
+    st.session_state.api = ""
+
+api_input = st.text_input("🔑 API Key AI", type="password", value=st.session_state.api)
+
+if api_input:
+    st.session_state.api = api_input
+
+client = OpenAI(api_key=st.session_state.api) if (st.session_state.api and OpenAI) else None
 
 # ===== ACCOUNTS =====
 accounts = [
@@ -50,23 +57,19 @@ def save():
     with open("data.json","w",encoding="utf-8") as f:
         json.dump(st.session_state.data, f, ensure_ascii=False)
 
-# ===== PARSE CHATGPT TEXT =====
+# ===== PARSE =====
 def parse_text(txt):
-
     current = None
     time = ""
     content = ""
     caption = ""
 
     for line in txt.split("\n"):
-
         line = line.strip()
 
-        # ===== detect time + account =====
         match = re.match(r"(\d{1,2}:\d{2}).*(TRẦN LINH.*|Diamond Linh)", line, re.IGNORECASE)
         if match:
             time = match.group(1)
-
             for acc in accounts:
                 if acc.lower() in line.lower():
                     current = acc
@@ -88,35 +91,49 @@ def parse_text(txt):
     save()
 
 # ===== SORT =====
-def sort_data():
+def get_today_posts():
+    today = str(datetime.date.today())
+    posts = []
+
     for acc in accounts:
-        st.session_state.data[acc].sort(key=lambda x: x.get("time",""))
+        for item in st.session_state.data[acc]:
+            if item["date"] == today:
+                posts.append((item["time"], acc, item))
+
+    posts.sort(key=lambda x: x[0])
+    return posts
 
 # ===== TABS =====
-tabs = st.tabs(accounts + ["📥 Nhập","🧠 AI","💰 CRM"])
+tabs = st.tabs(["🏠 Trang chủ"] + accounts + ["📥 Nhập","🧠 AI","💰 CRM"])
 
-# ===== DISPLAY =====
-for i, acc in enumerate(accounts):
-    with tabs[i]:
-        st.subheader(acc)
+# ===== HOME =====
+with tabs[0]:
 
-        # SORT trước khi hiển thị
-        sort_data()
+    st.subheader("🔥 Hôm nay đăng gì")
 
-        for item in st.session_state.data[acc]:
-            st.write(f"{item['time']} - {item['content']}")
-            st.caption(item['caption'])
+    posts = get_today_posts()
 
-# ===== IMPORT =====
-with tabs[len(accounts)]:
-    txt = st.text_area("Dán lịch ChatGPT")
+    if posts:
+        for t, acc, item in posts:
+            st.write(f"⏰ {t} | {acc}")
+            st.write(f"👉 {item['content']}")
+            st.caption(item["caption"])
+    else:
+        st.warning("Hôm nay chưa có lịch")
 
-    if st.button("🔥 Xử lý"):
-        parse_text(txt)
-        st.success("Đã phân tích đúng format ChatGPT")
+    st.divider()
 
-# ===== AI =====
-with tabs[len(accounts)+1]:
+    st.subheader("⚠️ Khách chưa phản hồi")
+
+    if st.session_state.customers:
+        for c in st.session_state.customers:
+            st.write("👤", c)
+    else:
+        st.info("Chưa có khách")
+
+    st.divider()
+
+    st.subheader("🧠 Gợi ý hành động")
 
     if st.button("🔥 Hôm nay làm gì?"):
 
@@ -129,14 +146,42 @@ with tabs[len(accounts)+1]:
                 model="gpt-4o-mini",
                 messages=[{
                     "role":"user",
-                    "content":f"Dựa vào dữ liệu này, đề xuất hành động hôm nay:\n{data}"
+                    "content":f"Dựa vào dữ liệu hôm nay, nên làm gì:\n{data}"
                 }]
             )
 
             st.success(res.choices[0].message.content)
 
-# ===== CRM =====
+# ===== DISPLAY =====
+for i, acc in enumerate(accounts):
+    with tabs[i+1]:
+        st.subheader(acc)
+
+        data = sorted(st.session_state.data[acc], key=lambda x: x.get("time",""))
+
+        for item in data:
+            st.write(f"{item['time']} - {item['content']}")
+            st.caption(item['caption'])
+
+# ===== IMPORT =====
+with tabs[len(accounts)+1]:
+    txt = st.text_area("Dán lịch ChatGPT")
+
+    if st.button("🔥 Xử lý"):
+        parse_text(txt)
+        st.success("OK")
+
+# ===== AI =====
 with tabs[len(accounts)+2]:
+
+    if st.button("Test AI"):
+        if not client:
+            st.warning("Chưa nhập API")
+        else:
+            st.success("AI OK")
+
+# ===== CRM =====
+with tabs[len(accounts)+3]:
 
     name = st.text_input("Tên khách")
 
