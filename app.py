@@ -1,5 +1,5 @@
 import streamlit as st
-import datetime, random, json, os
+import datetime, json, os
 
 try:
     from openai import OpenAI
@@ -7,16 +7,25 @@ except:
     OpenAI = None
 
 st.set_page_config(layout="wide")
-
 st.markdown("<style>.block-container {padding-top:10px;}</style>", unsafe_allow_html=True)
 
-st.title("💎 Diamond System V14 - AI OPERATOR")
+st.title("💎 Diamond System V15 - FINAL")
 
 # ===== API =====
 api_key = st.text_input("🔑 API Key AI", type="password")
 client = OpenAI(api_key=api_key) if (api_key and OpenAI) else None
 
-accounts = ["FB 1","FB 2","FB 3","FB 4","FB 5","Fanpage","Zalo","TikTok"]
+# ===== ACCOUNTS =====
+accounts = [
+"Trần Linh Diamond",
+"Trần Linh Jewellery",
+"Trần Linh Kim Cương",
+"Trần Linh",
+"Diamond Linh",
+"Fanpage",
+"Zalo",
+"TikTok"
+]
 
 # ===== LOAD =====
 def load():
@@ -51,48 +60,58 @@ def save():
             "customers":st.session_state.customers
         },f,ensure_ascii=False)
 
-# ===== IMPORT =====
+# ===== IMPORT CHATGPT STYLE =====
 def import_text(txt):
-    current = accounts[0]
+    current = None
+    content = ""
+
     for line in txt.split("\n"):
 
-        if line.strip() in accounts:
-            current = line.strip()
+        line = line.strip()
+
+        if line in accounts:
+            current = line
 
         elif "Nội dung:" in line:
             content = line.replace("Nội dung:","").strip()
+
+        elif "Ghi chú:" in line and current:
+            note = line.replace("Ghi chú:","").strip()
+
             st.session_state.data[current].append({
                 "date":str(datetime.date.today()),
                 "content":content
             })
 
-        elif "Ghi chú:" in line:
-            st.session_state.notes[current] = line.replace("Ghi chú:","").strip()
+            st.session_state.notes[current] = note
 
     save()
 
 # ===== TABS =====
-tabs = st.tabs(accounts + ["📥 Nhập","🔥 Chốt","📈 Follow","🎯 Khách","🧠 AI Điều hành","💰 CRM"])
+tabs = st.tabs(accounts + [
+"📥 Nhập","🔥 Chốt","📈 Follow","🎯 Khách","🧠 AI Điều hành","💰 CRM"
+])
 
 # ===== DISPLAY =====
 for i, acc in enumerate(accounts):
     with tabs[i]:
         st.subheader(acc)
         st.info(st.session_state.notes[acc])
+
         for item in st.session_state.data[acc]:
             st.write(item)
 
 # ===== IMPORT =====
 with tabs[len(accounts)]:
-    txt = st.text_area("Dán dữ liệu")
+    txt = st.text_area("Dán lịch kiểu ChatGPT")
 
-    if st.button("Xử lý"):
+    if st.button("🔥 Xử lý"):
         import_text(txt)
-        st.success("OK")
+        st.success("Đã phân loại đúng tab")
 
-# ===== CLOSE =====
+# ===== CHỐT =====
 with tabs[len(accounts)+1]:
-    msg = st.text_area("Tin nhắn")
+    msg = st.text_area("Tin nhắn khách")
 
     if st.button("Chốt"):
         if client:
@@ -131,12 +150,11 @@ with tabs[len(accounts)+3]:
 # ===== AI ĐIỀU HÀNH =====
 with tabs[len(accounts)+4]:
 
-    if st.button("🔥 Hôm nay nên làm gì?"):
+    if st.button("🔥 Hôm nay làm gì?"):
 
         if client:
             data = json.dumps(st.session_state.data, ensure_ascii=False)
             notes = json.dumps(st.session_state.notes, ensure_ascii=False)
-            customers = ", ".join(st.session_state.customers)
 
             res = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -149,13 +167,7 @@ Dữ liệu:
 Ghi chú:
 {notes}
 
-Khách:
-{customers}
-
-Hãy đề xuất:
-- hôm nay nên làm gì
-- ưu tiên kênh nào
-- nên đăng hay chốt
+Đề xuất hành động hôm nay
 """
                 }]
             )
